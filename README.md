@@ -43,3 +43,77 @@ Restart apache2 service
 
 ![Apache Status](./Images/apache-status.png)
 
+
+### Configure load balancing
+
+Edit the configuration file by typing the code below
+
+`sudo vi /etc/apache2/sites-available/000-default.conf `
+
+Copy the configuration underneath into the file and save it
+
+```
+
+#Add this configuration into this section <VirtualHost *:80>  </VirtualHost>
+
+<Proxy "balancer://mycluster">
+               BalancerMember http://<WebServer1-Private-IP-Address>:80 loadfactor=5 timeout=1
+               BalancerMember http://<WebServer2-Private-IP-Address>:80 loadfactor=5 timeout=1
+               ProxySet lbmethod=bytraffic
+               # ProxySet lbmethod=byrequests
+        </Proxy>
+
+        ProxyPreserveHost On
+        ProxyPass / balancer://mycluster/
+        ProxyPassReverse / balancer://mycluster/
+```
+![Apache Config](./Images/apache-update-conf.png) 
+
+Then restart the apache server
+
+`sudo systemctl restart apache2`
+
+### Verify if the configuration work
+
+Access the public address of the Load Balancer Server on the browser to check if the configuration works. If it works, it will load the Propitix Login Page
+
+
+![Load Balancer Browser](./Images/load-balancer.png)
+
+Then unmount the /var/log/httpd from the NFS Server /mnt/apps to check the log and see the log of each webserver to know how they response to the load balancer
+
+`sudo umount /var/log/httpd/`
+
+On each of the webserver, type the following code and see how they response to the website loading
+
+`sudo tail -f /var/log/httpd/access_log`
+
+![Log Checking](./Images/access_log.png)
+
+### Configuring Nameserver for the Loadbalancer using Web1 for Webserver 1 and Web2 for Webserver 2
+
+`sudo vi /etc/hosts`
+
+Then copy the following under it
+
+```
+#Add 2 records into this file with Local IP address and arbitrary name for both of your Web Servers
+
+<WebServer1-Private-IP-Address> Web1
+<WebServer2-Private-IP-Address> Web2
+```
+![Nameserver](./Images/nameserver.png) 
+
+Then go to edit the apache config file to change the webserver private ipaddress to the name in the hosts file
+
+
+`sudo vi /etc/apache2/sites-available/000-default.conf`
+
+
+Change the Private Ip Address of Webserver 1 into Web1 and Webserver 2 into Web2
+
+![Apache Config](./Images/apache-update-conf.png) 
+
+You can try to curl your Web Servers from LB locally curl http://Web1 or curl http://Web2 on the LB server terminal
+
+![Apache Config](./Images/curl.png) 
